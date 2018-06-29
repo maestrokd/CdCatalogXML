@@ -32,7 +32,7 @@ public class XmlController {
 
 
     @GetMapping("/main")
-    public ModelAndView listUploadedFiles() {
+    public ModelAndView getMain() {
         ModelAndView modelAndView = new ModelAndView();
         modelAndView.setViewName("uploadForm");
         List<Cd> cds;
@@ -64,7 +64,7 @@ public class XmlController {
 
 
     @RequestMapping(value = "/api/catalog/pageResource", method = RequestMethod.GET)
-    public ResponseEntity<String> getCatalogPageResource(
+    public ResponseEntity<String> getCatalogAsPageResource(
             @RequestParam(name = "page") int page,
             @RequestParam(name = "size") int size) {
         String serverXmlString;
@@ -99,8 +99,8 @@ public class XmlController {
 
 
     @RequestMapping(value = "/api/catalog/upload")
-    public ModelAndView doUpload(@RequestParam("file") MultipartFile multipartFile,
-                                 RedirectAttributes redirectAttributes) {
+    public ModelAndView doUploadFile(@RequestParam("file") MultipartFile multipartFile,
+                                     RedirectAttributes redirectAttributes) {
         ModelAndView modelAndView = new ModelAndView();
         modelAndView.setViewName("redirect:/main");
         try {
