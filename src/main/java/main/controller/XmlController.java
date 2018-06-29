@@ -52,7 +52,7 @@ public class XmlController {
 
         List<Cd> cds = catalogService.getCatalog().getCds();
         ModelAndView modelAndView= new ModelAndView();
-        modelAndView.setViewName("uploadForm");
+        modelAndView.setViewName("main");
         modelAndView.addObject("files", cds);
 
         return modelAndView;
