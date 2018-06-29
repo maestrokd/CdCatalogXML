@@ -57,8 +57,17 @@
 
         </div>
         <div class="col-sm-9">
-            <div th:if="${message}">
-                <h2 th:text="${message}"/>
+            <div th:if="${UploadFileInfoMessage}" class="alert alert-success alert-dismissible fade in">
+                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <strong th:text="${UploadFileInfoMessage}"></strong>
+            </div>
+            <div th:if="${UploadFileErrorMessage}" class="alert alert-danger alert-dismissible fade in">
+                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <strong th:text="${UploadFileErrorMessage}"></strong>
+            </div>
+            <div th:if="${MainErrorMessage}" class="alert alert-danger alert-dismissible fade in">
+                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                <strong th:text="${MainErrorMessage}"></strong>
             </div>
 
             <div class="panel panel-default">
@@ -84,7 +93,7 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr th:each="cd : ${files}">
+                        <tr th:each="cd : ${cds}">
                             <td th:text="${cd?.title}">11</td>
                             <td th:text="${cd?.artist}">11</td>
                             <td th:text="${cd?.country}">11</td>
@@ -99,17 +108,17 @@
             </div>
 
             <!--<div class="panel panel-default">-->
-                <!--<div class="panel-heading"><h3>Catalog for test</h3></div>-->
-                <!--<div class="panel-body">-->
-                    <!--<div>-->
-                        <!--<ul>-->
-                            <!--<li th:each="file : ${files}">-->
-                                <!--<a th:href="${file}" th:text="${file}"/>-->
-                            <!--</li>-->
-                        <!--</ul>-->
-                    <!--</div>-->
+            <!--<div class="panel-heading"><h3>Catalog for test</h3></div>-->
+            <!--<div class="panel-body">-->
+            <!--<div>-->
+            <!--<ul>-->
+            <!--<li th:each="file : ${files}">-->
+            <!--<a th:href="${file}" th:text="${file}"/>-->
+            <!--</li>-->
+            <!--</ul>-->
+            <!--</div>-->
 
-                <!--</div>-->
+            <!--</div>-->
             <!--</div>-->
 
         </div>

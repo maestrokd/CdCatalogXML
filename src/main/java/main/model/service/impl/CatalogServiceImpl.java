@@ -11,8 +11,13 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,27 +26,43 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+
 @Service
 public class CatalogServiceImpl implements CatalogService {
 
-    @Autowired
     private File serverFile;
-    @Autowired
+
     private XmlMapper xmlMapper;
+
+
+    @Autowired
+    public CatalogServiceImpl(File serverFile, XmlMapper xmlMapper) {
+        this.serverFile = serverFile;
+        this.xmlMapper = xmlMapper;
+    }
+
+
+    @Override
+    public String getCatalogAsString() throws IOException {
+        return readFileFromServer();
+    }
 
 
     @Override
     public Catalog getCatalog() throws IOException {
-        return xmlMapper.readValue(getCatalogAsXmlString(), Catalog.class);
+        String str = getCatalogAsString();
+        return convertStringToCatalog(str);
     }
 
-    @Override
-    public String getCatalogAsXmlString() throws IOException {
-        return inputStreamToString(new FileInputStream(serverFile));
-    }
 
     @Override
-    public Resource getCatalogAsResource() throws MalformedURLException {
+    public List<Cd> getAllCds() throws IOException {
+        return getCatalog().getCds();
+    }
+
+
+    @Override
+    public Resource getFileOnServerAsResource() throws MalformedURLException {
         Path file = serverFile.toPath();
         return new UrlResource(file.toUri());
     }
@@ -49,6 +70,10 @@ public class CatalogServiceImpl implements CatalogService {
 
     @Override
     public String getCatalogAsPageResourceString(int page, int size) throws IOException {
+        if (size < 1 || page < 1) {
+            throw new IllegalArgumentException();
+        }
+
         Catalog catalog = getCatalog();
         int sizeDB = catalog.getCds().size();
 
@@ -58,53 +83,65 @@ public class CatalogServiceImpl implements CatalogService {
         int skip = size * (pageNew - 1);
 
         Stream<Cd> cdStream = catalog.getCds().stream().skip(skip).limit(size);
-        List<Cd> collect = cdStream.collect(Collectors.toList());
+        List<Cd> collectCdList = cdStream.collect(Collectors.toList());
 
-        CatalogPageResource catalogPageResource = new CatalogPageResource();
-        catalogPageResource.setCds(collect);
-        catalogPageResource.setSize(size);
-        catalogPageResource.setPage(pageNew);
-        catalogPageResource.setTotalPage(totalPageNew);
+        CatalogPageResource catalogPageResource = new CatalogPageResource(collectCdList, size, totalPageNew, pageNew);
         return xmlMapper.writeValueAsString(catalogPageResource);
     }
 
 
     @Override
     public void addUploadedMultipartFileToServerFile(MultipartFile multipartFile) throws IOException {
-        String uploadXmlString = new BufferedReader(new InputStreamReader(multipartFile
-                .getInputStream())).lines().collect(Collectors.joining("\n"));
-
-        Catalog uploadCatalog = xmlMapper.readValue(uploadXmlString, Catalog.class);
-
-        String serverXmlString = getCatalogAsXmlString();
-        Catalog serverCatalog = xmlMapper.readValue(serverXmlString, Catalog.class);
-
-        addCatalogForUploadedFileToCatalogForServerFile(uploadCatalog, serverCatalog);
-        xmlMapper.writeValue(serverFile, serverCatalog);
+        String uploadXmlString = readMultipartFile(multipartFile);
+        Catalog uploadCatalog = convertStringToCatalog(uploadXmlString);
+        Catalog newCatalogOnServer = addCatalogForUploadedFileToCatalogForServerFile(uploadCatalog, getCatalog());
+        writeToFileOnServer(newCatalogOnServer);
     }
 
-    private String inputStreamToString(InputStream is) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        String line;
-        BufferedReader br = new BufferedReader(new InputStreamReader(is));
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-        }
-        br.close();
-        return sb.toString();
-    }
 
-    private void addCatalogForUploadedFileToCatalogForServerFile(Catalog uploadCatalog, Catalog serverCatalog) {
-
-        Map<String, Cd> cdMap = new HashMap<>();
-        for (Cd cd : serverCatalog.getCds()) {
-            cdMap.put(cd.getTitle(), cd);
-        }
-
+    private Catalog addCatalogForUploadedFileToCatalogForServerFile(Catalog uploadCatalog, Catalog serverCatalog) {
+        Map<String, Cd> serverCdsMap = convertCdListToMap(serverCatalog.getCds());
         for (Cd cd : uploadCatalog.getCds()) {
+            serverCdsMap.put(cd.getTitle(), cd);
+        }
+        return new Catalog(new ArrayList<>(serverCdsMap.values()));
+    }
+
+
+    private boolean writeToFileOnServer(Catalog catalog) {
+        try {
+            xmlMapper.writeValue(serverFile, catalog);
+        } catch (IOException e) {
+            return false;
+        }
+        return true;
+    }
+
+
+    private String readFileFromServer() throws IOException {
+        byte[] encoded = Files.readAllBytes(serverFile.toPath());
+        return new String(encoded, Charset.defaultCharset());
+    }
+
+
+    private String readMultipartFile(MultipartFile multipartFile) throws IOException {
+        return new BufferedReader(new InputStreamReader(multipartFile
+                .getInputStream())).lines().collect(Collectors.joining("\n"));
+    }
+
+
+    private Map<String, Cd> convertCdListToMap(List<Cd> cdList) {
+        Map<String, Cd> cdMap = new HashMap<>();
+        for (Cd cd : cdList) {
             cdMap.put(cd.getTitle(), cd);
         }
-        serverCatalog.setCds(new ArrayList<>(cdMap.values()));
+        return cdMap;
     }
+
+
+    private Catalog convertStringToCatalog(String xmlOfCatalog) throws IOException {
+        return xmlMapper.readValue(xmlOfCatalog, Catalog.class);
+    }
+
 
 }

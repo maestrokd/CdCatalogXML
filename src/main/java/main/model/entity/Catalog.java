@@ -11,4 +11,8 @@ import java.util.List;
 public class Catalog {
     @JacksonXmlProperty(localName = "CD")
     private List<Cd> cds = new ArrayList<>();
+
+    public Catalog(List<Cd> cds) {
+        this.cds = cds;
+    }
 }
