@@ -82,7 +82,10 @@ public class CatalogServiceImpl implements CatalogService {
 
         int skip = size * (pageNew - 1);
 
-        Stream<Cd> cdStream = catalog.getCds().stream().skip(skip).limit(size);
+        Stream<Cd> cdStream = catalog.getCds().stream()
+                                                .skip(skip)
+                                                .limit(size);
+
         List<Cd> collectCdList = cdStream.collect(Collectors.toList());
 
         CatalogPageResource catalogPageResource = new CatalogPageResource(collectCdList, size, totalPageNew, pageNew);
@@ -108,13 +111,8 @@ public class CatalogServiceImpl implements CatalogService {
     }
 
 
-    private boolean writeToFileOnServer(Catalog catalog) {
-        try {
-            xmlMapper.writeValue(serverFile, catalog);
-        } catch (IOException e) {
-            return false;
-        }
-        return true;
+    private void writeToFileOnServer(Catalog catalog) throws IOException {
+        xmlMapper.writeValue(serverFile, catalog);
     }
 
 
