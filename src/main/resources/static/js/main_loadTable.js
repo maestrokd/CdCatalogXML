@@ -1,78 +1,131 @@
-$(document).ready(function () {
-    loadTable();
-    $('#table_DataTable_Id').DataTable();
-});
 
-function loadTable() {
-    $.ajax({
-        type: "GET",
-        url: "/api/catalog/pageResource?page=" + pageGlobal + "&size=" + sizeGlobal,
-        cache: false,
-        dataType: "xml",
-        success: function (xml) {
-            var table = "<thead>\n" +
-                "                    <tr>\n" +
-                "                        <th>TITLE</th>\n" +
-                "                        <th>ARTIST</th>\n" +
-                "                        <th>COUNTRY</th>\n" +
-                "                        <th>COMPANY</th>\n" +
-                "                        <th>PRICE</th>\n" +
-                "                        <th>YEAR</th>\n" +
-                "                    </tr>\n" +
-                "                    </thead>\n" +
-                "                    <tbody>";
+(function() {
 
-            $(xml).find('CD').each(function () {
-                table += "<tr><td>" +
-                    this.getElementsByTagName("TITLE")[0].childNodes[0].nodeValue +
-                    "</td><td>" +
-                    this.getElementsByTagName("ARTIST")[0].childNodes[0].nodeValue +
-                    "</td><td>" +
-                    this.getElementsByTagName("COUNTRY")[0].childNodes[0].nodeValue +
-                    "</td><td>" +
-                    this.getElementsByTagName("COMPANY")[0].childNodes[0].nodeValue +
-                    "</td><td>" +
-                    this.getElementsByTagName("PRICE")[0].childNodes[0].nodeValue +
-                    "</td><td>" +
-                    this.getElementsByTagName("YEAR")[0].childNodes[0].nodeValue +
-                    "</td></tr>";
-            });
+    var self = window.catalogController || {};
+    window.catalogController = self;
 
-            table += "</tbody>";
-            document.getElementById("table_ForAjax_Id").innerHTML = table;
+    var uploadedPage;
 
-            var page = $(xml).find('PAGE').text();
-            var totalPage = $(xml).find('TOTALPAGE').text();
-            var sizeLocal = $(xml).find('SIZE').text();
+    var uploadedTotalPage;
 
-            $("#buttons").empty()
 
-            if (page > 1) {
-                var buttonPrevious = document.createElement("button");
-                buttonPrevious.className = "btn btn-success";
-                buttonPrevious.appendChild(document.createTextNode("Previous"));
-                buttonPrevious.setAttribute("id", "buttonPreviousId");
-                $("#buttons").append(buttonPrevious);
+    function getTableRowFromArray(data) {
 
-                $("#buttonPreviousId").click(function () {
-                    window.pageGlobal = Number(page) - 1;
-                    loadTable();
-                });
-            }
+        if (!Array.isArray(data)) { return ''}
 
-            if (page < totalPage) {
-                var buttonNext = document.createElement("button");
-                buttonNext.className = "btn btn-success";
-                buttonNext.appendChild(document.createTextNode("Next"));
-                buttonNext.setAttribute("id", "buttonNextId");
-                $("#buttons").append(buttonNext);
+        var result = '';
 
-                $("#buttonNextId").click(function () {
-                    window.pageGlobal = Number(page) + 1;
-                    loadTable();
-                });
-            }
-
+        for (var i = 0; i < data.length; i++) {
+            result += '<td>' + data[i] + '</td>\n';
         }
+
+        return ['<tr>', result, '</tr>'].join('\n');
+    }
+
+
+    function createTableContent(data) {
+        return [
+            "<thead>",
+            "<tr>",
+            "<th>TITLE</th>",
+            "<th>ARTIST</th>",
+            "<th>COUNTRY</th>",
+            "<th>COMPANY</th>",
+            "<th>PRICE</th>",
+            "<th>YEAR</th>",
+            "</tr>",
+            "</thead>",
+            "<tbody>",
+            data,
+            "</tbody>"
+        ].join('\n');
+    }
+
+
+    function getTableRowsFromXML(xml) {
+        var data = [];
+
+        $(xml).find('CD').each(function() {
+            var innerString = [
+                this.getElementsByTagName("TITLE")[0].childNodes[0].nodeValue,
+                this.getElementsByTagName("ARTIST")[0].childNodes[0].nodeValue,
+                this.getElementsByTagName("COUNTRY")[0].childNodes[0].nodeValue,
+                this.getElementsByTagName("COMPANY")[0].childNodes[0].nodeValue,
+                this.getElementsByTagName("PRICE")[0].childNodes[0].nodeValue,
+                this.getElementsByTagName("YEAR")[0].childNodes[0].nodeValue
+            ];
+
+            data.push(getTableRowFromArray(innerString));
+        });
+
+        return data.join('\n');
+    }
+
+
+    self.refreshTableWithDecrement = function () {
+        window.pageGlobal = Number(uploadedPage) - 1;
+        loadTable();
+    };
+
+
+    self.refreshTableWithIncrement = function() {
+        window.pageGlobal = Number(uploadedPage) + 1;
+        loadTable();
+    };
+
+
+    function getButton(className, text, onClickFunction) {
+        return [
+            '<button onclick=catalogController.' + onClickFunction + '() class="' + className + '">',
+            text,
+            '</button>'
+        ].join('\n');
+    }
+
+
+    function refreshButtons() {
+        var buttonsPlaceholder = $("#buttons");
+
+        buttonsPlaceholder.empty();
+
+        if (uploadedPage > 1) {
+            var buttonPrevious = getButton('btn btn-success', 'Previous', 'refreshTableWithDecrement');
+            buttonsPlaceholder.html(buttonsPlaceholder.html() + buttonPrevious);
+        }
+
+        if (uploadedPage < uploadedTotalPage) {
+            var buttonNext = getButton('btn btn-success', 'Next', 'refreshTableWithIncrement');
+            buttonsPlaceholder.html(buttonsPlaceholder.html() + buttonNext);
+        }
+    }
+
+
+    function onDataLoaded(xml) {
+        var rows = getTableRowsFromXML(xml);
+        var table = createTableContent(rows);
+        $('#table_ForAjax_Id').html(table);
+
+        uploadedPage = $(xml).find('PAGE').text();
+        uploadedTotalPage = $(xml).find('TOTALPAGE').text();
+
+        refreshButtons();
+    }
+
+
+    function loadTable() {
+        $.ajax({
+            type: "GET",
+            url: "/api/catalog/pageResource?page=" + pageGlobal + "&size=" + sizeGlobal,
+            cache: false,
+            dataType: "xml",
+            success: onDataLoaded
+        });
+    }
+
+
+    $(document).ready(function () {
+        loadTable();
+        $('#table_DataTable_Id').DataTable();
     });
-}
+
+})();
