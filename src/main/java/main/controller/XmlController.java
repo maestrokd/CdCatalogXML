@@ -34,7 +34,7 @@ public class XmlController {
     @GetMapping("/main")
     public ModelAndView getMain() {
         ModelAndView modelAndView = new ModelAndView();
-        modelAndView.setViewName("uploadForm");
+        modelAndView.setViewName("main");
         List<Cd> cds;
         try {
             cds = catalogService.getAllCds();
